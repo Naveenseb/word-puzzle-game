@@ -316,7 +316,7 @@ export function WordPuzzleGame() {
               {gameStarted && gameWords.length > 0 ? (
                 <>
                   <div
-                    className="grid gap-0.5 sm:gap-1 mx-auto w-fit select-none"
+                    className="grid gap-1 sm:gap-1 mx-auto w-fit select-none"
                     style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
                     onMouseLeave={() => {
                       if (isSelecting) {
@@ -330,8 +330,8 @@ export function WordPuzzleGame() {
                         <div
                           key={`${rowIndex}-${colIndex}`}
                           className={`
-                            w-6 h-6 sm:w-10 sm:h-10 md:w-12 md:h-12 border border-border flex items-center justify-center
-                            text-xs sm:text-sm md:text-base font-bold cursor-pointer transition-colors
+                            w-10 h-10 sm:w-10 sm:h-10 md:w-12 md:h-12 border border-border flex items-center justify-center
+                            text-sm sm:text-sm md:text-base font-bold cursor-pointer transition-colors
                             ${
                               cell.isFound
                                 ? "bg-accent text-accent-foreground"
