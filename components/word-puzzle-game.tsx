@@ -73,6 +73,8 @@ export function WordPuzzleGame() {
   const [showHints, setShowHints] = useState(false)
   const [showStartPage, setShowStartPage] = useState(true)
   const [showMobileHints, setShowMobileHints] = useState(false)
+  const [selectedMobileLetters, setSelectedMobileLetters] = useState<{ row: number; col: number }[]>([])
+  const [mobileWordValidation, setMobileWordValidation] = useState<"none" | "correct" | "incorrect">("none")
 
   // Timer effect
   useEffect(() => {
@@ -173,6 +175,8 @@ export function WordPuzzleGame() {
     setTimeElapsed(0)
     setGameStarted(true)
     setShowStartPage(false)
+    setSelectedMobileLetters([])
+    setMobileWordValidation("none")
   }, [selectRandomWords])
 
   const handleCellMouseDown = (row: number, col: number, e: React.MouseEvent | React.TouchEvent) => {
@@ -215,6 +219,105 @@ export function WordPuzzleGame() {
   const clearSelection = () => {
     setSelectedCells([])
     setGrid((prevGrid) => prevGrid.map((row) => row.map((cell) => ({ ...cell, isSelected: false }))))
+  }
+
+  // Check if two positions are adjacent (including diagonally)
+  const isAdjacent = (pos1: { row: number; col: number }, pos2: { row: number; col: number }) => {
+    const rowDiff = Math.abs(pos1.row - pos2.row)
+    const colDiff = Math.abs(pos1.col - pos2.col)
+    return rowDiff <= 1 && colDiff <= 1 && !(rowDiff === 0 && colDiff === 0)
+  }
+
+  // Check if all selected letters form a connected path (no gaps)
+  const areAllLettersAdjacent = (letters: { row: number; col: number }[]) => {
+    if (letters.length <= 1) return true
+    
+    // Use BFS to check if all letters are connected
+    const visited = new Set<string>()
+    const queue = [letters[0]]
+    visited.add(`${letters[0].row},${letters[0].col}`)
+    
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      
+      // Check all other letters to see if they're adjacent to current
+      for (const letter of letters) {
+        const key = `${letter.row},${letter.col}`
+        if (!visited.has(key) && isAdjacent(current, letter)) {
+          visited.add(key)
+          queue.push(letter)
+        }
+      }
+    }
+    
+    // If we visited all letters, they form a connected path
+    return visited.size === letters.length
+  }
+
+  // Mobile: Handle individual letter click
+  const handleMobileLetterClick = (row: number, col: number) => {
+    const isAlreadySelected = selectedMobileLetters.some(pos => pos.row === row && pos.col === col)
+    
+    if (isAlreadySelected) {
+      // Remove from selection
+      setSelectedMobileLetters(prev => prev.filter(pos => !(pos.row === row && pos.col === col)))
+    } else {
+      // Add to selection
+      setSelectedMobileLetters(prev => [...prev, { row, col }])
+    }
+    
+    setMobileWordValidation("none")
+  }
+
+  // Mobile: Check if selected letters form a valid word
+  const checkMobileWord = () => {
+    if (selectedMobileLetters.length < 2) return
+
+    // First check if all selected letters are adjacent
+    if (!areAllLettersAdjacent(selectedMobileLetters)) {
+      setMobileWordValidation("incorrect")
+      setTimeout(() => {
+        setSelectedMobileLetters([])
+        setMobileWordValidation("none")
+      }, 1500)
+      return
+    }
+
+    const selectedWord = selectedMobileLetters
+      .map(({ row, col }) => grid[row][col].letter)
+      .join("")
+    
+    const reversedWord = selectedWord.split("").reverse().join("")
+    const WORDS = gameWords.map((w) => w.word)
+    const foundWord = WORDS.find((word) => word === selectedWord || word === reversedWord)
+
+    if (foundWord && !foundWords.has(foundWord)) {
+      setMobileWordValidation("correct")
+      // Mark cells as found
+      setGrid((prevGrid) => {
+        const newGrid = [...prevGrid]
+        selectedMobileLetters.forEach(({ row, col }) => {
+          newGrid[row][col].isFound = true
+        })
+        return newGrid
+      })
+      setFoundWords((prev) => new Set([...prev, foundWord]))
+      setScore((prev) => prev + foundWord.length * 10)
+      setSelectedMobileLetters([])
+      setTimeout(() => setMobileWordValidation("none"), 2000)
+    } else {
+      setMobileWordValidation("incorrect")
+      setTimeout(() => {
+        setSelectedMobileLetters([])
+        setMobileWordValidation("none")
+      }, 1500)
+    }
+  }
+
+  // Mobile: Clear selected letters
+  const clearMobileSelection = () => {
+    setSelectedMobileLetters([])
+    setMobileWordValidation("none")
   }
 
   const checkForWord = () => {
@@ -396,14 +499,7 @@ export function WordPuzzleGame() {
                     <RotateCcw className="h-3 w-3 mr-1" />
                     Neu
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowStartPage(true)}
-                    className="text-xs bg-transparent"
-                  >
-                    Start
-                  </Button>
+                 
                 </div>
             </div>
           </CardHeader>
@@ -413,12 +509,6 @@ export function WordPuzzleGame() {
                 <div
                   className="grid gap-1 mx-auto w-full max-w-[90vw] select-none"
                   style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
-                  onMouseLeave={() => {
-                    if (isSelecting) {
-                      setIsSelecting(false)
-                      clearSelection()
-                    }
-                  }}
                 >
                   {grid.map((row, rowIndex) =>
                     row.map((cell, colIndex) => (
@@ -426,46 +516,59 @@ export function WordPuzzleGame() {
                         key={`${rowIndex}-${colIndex}`}
                         className={`
                           w-full aspect-square border border-border flex items-center justify-center
-                          text-sm font-bold cursor-pointer transition-colors
+                          text-sm font-bold cursor-pointer transition-all duration-200 active:scale-95
                           ${
                             cell.isFound
-                              ? "bg-accent text-accent-foreground"
-                              : cell.isSelected
-                                ? "bg-secondary text-secondary-foreground"
-                                : "bg-card hover:bg-muted"
+                              ? "bg-green-500 text-white"
+                              : selectedMobileLetters.some(pos => pos.row === rowIndex && pos.col === colIndex)
+                                ? mobileWordValidation === "correct"
+                                  ? "bg-green-400 text-white"
+                                  : mobileWordValidation === "incorrect"
+                                    ? "bg-red-400 text-white"
+                                    : "bg-blue-400 text-white"
+                                : "bg-card hover:bg-muted active:bg-primary/20"
                           }
                         `}
-                        onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
-                        onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
-                        onMouseUp={handleCellMouseUp}
-                        onTouchStart={(e) => {
-                          e.preventDefault()
-                          handleCellMouseDown(rowIndex, colIndex, e)
-                        }}
-                        onTouchMove={(e) => {
-                          e.preventDefault()
-                          if (isSelecting) {
-                            const touch = e.touches[0]
-                            const element = document.elementFromPoint(touch.clientX, touch.clientY)
-                            if (element && (element as HTMLElement).dataset.row && (element as HTMLElement).dataset.col) {
-                              handleCellMouseEnter(
-                                Number.parseInt((element as HTMLElement).dataset.row!),
-                                Number.parseInt((element as HTMLElement).dataset.col!),
-                              )
-                            }
-                          }
-                        }}
-                        onTouchEnd={(e) => {
-                          e.preventDefault()
-                          handleCellMouseUp()
-                        }}
-                        data-row={rowIndex}
-                        data-col={colIndex}
+                        onClick={() => handleMobileLetterClick(rowIndex, colIndex)}
                       >
                         {cell.letter}
                       </div>
                     )),
                   )}
+                </div>
+
+                {/* Mobile Word Display and Controls */}
+                <div className="mt-4 space-y-3">
+                  <div className="text-center">
+                    <div className="text-lg font-bold mb-2">
+                      Ausgewählte Buchstaben: <span className="text-primary">
+                        {selectedMobileLetters.map(({ row, col }) => grid[row][col].letter).join("") || "..."}
+                      </span>
+                    </div>
+                    {mobileWordValidation === "correct" && (
+                      <div className="text-green-600 font-semibold animate-pulse">✓ Richtig!</div>
+                    )}
+                    {mobileWordValidation === "incorrect" && (
+                      <div className="text-red-600 font-semibold animate-pulse">✗ Falsch!</div>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-center gap-2">
+                    <Button
+                      onClick={checkMobileWord}
+                      disabled={selectedMobileLetters.length < 2}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Prüfen
+                    </Button>
+                    <Button
+                      onClick={clearMobileSelection}
+                      variant="outline"
+                      disabled={selectedMobileLetters.length === 0}
+                    >
+                      Löschen
+                    </Button>
+                  </div>
                 </div>
 
                 {isGameComplete && (
