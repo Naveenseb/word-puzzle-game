@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Trophy, RotateCcw, Clock, HelpCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Trophy, RotateCcw, Clock, HelpCircle, X } from "lucide-react"
 
 const WORD_BANK = [
   { word: "HUND", hint: "Bester Freund des Menschen" },
@@ -71,6 +72,7 @@ export function WordPuzzleGame() {
   const [gameStarted, setGameStarted] = useState(false)
   const [showHints, setShowHints] = useState(false)
   const [showStartPage, setShowStartPage] = useState(true)
+  const [showMobileHints, setShowMobileHints] = useState(false)
 
   // Timer effect
   useEffect(() => {
@@ -248,12 +250,16 @@ export function WordPuzzleGame() {
   // Remove automatic game initialization - game starts only when user clicks start button
 
   // Start Page Component
-  const StartPage = () => (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="text-center space-y-8 p-4">
-        {/* Animated German Letters */}
-        <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
-          {GERMAN_LETTERS.split('').map((letter, index) => (
+  const StartPage = () => {
+    // Shuffle German letters for random display
+    const shuffledLetters = [...GERMAN_LETTERS.split('')].sort(() => Math.random() - 0.5)
+    
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center space-y-8 p-4">
+          {/* Animated German Letters */}
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
+            {shuffledLetters.map((letter, index) => (
             <div
               key={letter}
               className="w-12 h-12 sm:w-16 sm:h-16 bg-primary text-primary-foreground rounded-lg flex items-center justify-center text-lg sm:text-2xl font-bold shadow-lg animate-bounce"
@@ -316,7 +322,8 @@ export function WordPuzzleGame() {
         </div>
       </div>
     </div>
-  )
+    )
+  }
 
   // Show start page if not started
   if (showStartPage) {
@@ -363,62 +370,23 @@ export function WordPuzzleGame() {
         </Card>
       </div>
 
-      {/* Mobile: Hints first, then Grid */}
-      <div className="block sm:hidden space-y-4">
-        {/* Mobile Hints */}
-        <Card>
-          <CardHeader className="pb-1">
-            <CardTitle className="text-sm">Hinweise</CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
-            {gameStarted && gameWords.length > 0 ? (
-              <div className="space-y-1.5">
-                {gameWords.map((gameWord) => (
-                  <div key={gameWord.word} className="space-y-0.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium">
-                        {foundWords.has(gameWord.word) ? gameWord.word : "???"}
-                      </span>
-                      {foundWords.has(gameWord.word) && (
-                        <Badge variant="secondary" className="text-xs">
-                          ✓
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground italic">{gameWord.hint}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-2">
-                <p className="text-xs text-muted-foreground">
-                  Starte ein neues Spiel um Hinweise zu sehen!
-                </p>
-              </div>
-            )}
-
-            <Separator className="my-2" />
-
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>
-                <strong>Spielanleitung:</strong>
-              </p>
-              <ul className="list-disc list-inside space-y-0.5 text-xs">
-                <li>Klicke und ziehe um Buchstaben auszuwählen</li>
-                <li>Wörter können horizontal, vertikal oder diagonal sein</li>
-                <li>Wörter können vorwärts oder rückwärts stehen</li>
-                <li>Verwende die Hinweise um die Wörter zu finden</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-
+      {/* Mobile: Only Grid with Questions Button */}
+      <div className="block sm:hidden">
         {/* Mobile Game Grid */}
         <Card>
           <CardHeader className="pb-1">
             <div className="flex justify-between items-center">
               <CardTitle className="text-sm">Wörter-Gitter</CardTitle>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMobileHints(true)}
+                    className="text-xs bg-transparent"
+                  >
+                    <HelpCircle className="h-3 w-3 mr-1" />
+                    Fragen
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -434,7 +402,6 @@ export function WordPuzzleGame() {
                     onClick={() => setShowStartPage(true)}
                     className="text-xs bg-transparent"
                   >
-                    <HelpCircle className="h-3 w-3 mr-1" />
                     Start
                   </Button>
                 </div>
@@ -682,6 +649,54 @@ export function WordPuzzleGame() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Mobile Hints Popup */}
+        <Dialog open={showMobileHints} onOpenChange={setShowMobileHints}>
+          <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-lg">Hinweise & Fragen</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {gameStarted && gameWords.length > 0 ? (
+                <div className="space-y-3">
+                  {gameWords.map((gameWord) => (
+                    <div key={gameWord.word} className="space-y-2 p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          {foundWords.has(gameWord.word) ? gameWord.word : "???"}
+                        </span>
+                        {foundWords.has(gameWord.word) && (
+                          <Badge variant="secondary" className="text-xs">
+                            ✓ Gefunden
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground italic">{gameWord.hint}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Starte ein neues Spiel um Hinweise zu sehen!
+                  </p>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p className="font-semibold">Spielanleitung:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Ziehe mit dem Finger über die Buchstaben</li>
+                  <li>Wörter können horizontal, vertikal oder diagonal sein</li>
+                  <li>Wörter können vorwärts oder rückwärts stehen</li>
+                  <li>Verwende die Hinweise um die Wörter zu finden</li>
+                </ul>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
