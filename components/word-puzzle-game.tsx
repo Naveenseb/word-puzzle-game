@@ -286,15 +286,148 @@ export function WordPuzzleGame() {
         </Card>
       </div>
 
-      <div className="sm:hidden mb-3 text-center">
-        <Button variant="outline" size="sm" onClick={() => setShowHints(!showHints)} className="text-xs">
-          <HelpCircle className="h-3 w-3 mr-1" />
-          {showHints ? "Hinweise ausblenden" : "Hinweise anzeigen"}
-        </Button>
+      {/* Mobile: Hints first, then Grid */}
+      <div className="block sm:hidden space-y-4">
+        {/* Mobile Hints */}
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-sm">Hinweise</CardTitle>
+          </CardHeader>
+          <CardContent className="p-2">
+            {gameStarted && gameWords.length > 0 ? (
+              <div className="space-y-1.5">
+                {gameWords.map((gameWord) => (
+                  <div key={gameWord.word} className="space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">
+                        {foundWords.has(gameWord.word) ? gameWord.word : "???"}
+                      </span>
+                      {foundWords.has(gameWord.word) && (
+                        <Badge variant="secondary" className="text-xs">
+                          ✓
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground italic">{gameWord.hint}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-2">
+                <p className="text-xs text-muted-foreground">
+                  Starte ein neues Spiel um Hinweise zu sehen!
+                </p>
+              </div>
+            )}
+
+            <Separator className="my-2" />
+
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>
+                <strong>Spielanleitung:</strong>
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 text-xs">
+                <li>Klicke und ziehe um Buchstaben auszuwählen</li>
+                <li>Wörter können horizontal, vertikal oder diagonal sein</li>
+                <li>Wörter können vorwärts oder rückwärts stehen</li>
+                <li>Verwende die Hinweise um die Wörter zu finden</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Mobile Game Grid */}
+        <Card>
+          <CardHeader className="pb-1">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-sm">Wörter-Gitter</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={initializeGrid}
+                className="text-xs bg-transparent"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Neu
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-1">
+            {gameStarted && gameWords.length > 0 ? (
+              <>
+                <div
+                  className="grid gap-1 mx-auto w-full max-w-[90vw] select-none"
+                  style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
+                  onMouseLeave={() => {
+                    if (isSelecting) {
+                      setIsSelecting(false)
+                      clearSelection()
+                    }
+                  }}
+                >
+                  {grid.map((row, rowIndex) =>
+                    row.map((cell, colIndex) => (
+                      <div
+                        key={`${rowIndex}-${colIndex}`}
+                        className={`
+                          w-full aspect-square border border-border flex items-center justify-center
+                          text-sm font-bold cursor-pointer transition-colors
+                          ${
+                            cell.isFound
+                              ? "bg-accent text-accent-foreground"
+                              : cell.isSelected
+                                ? "bg-secondary text-secondary-foreground"
+                                : "bg-card hover:bg-muted"
+                          }
+                        `}
+                        onMouseDown={() => handleCellMouseDown(rowIndex, colIndex)}
+                        onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
+                        onMouseUp={handleCellMouseUp}
+                        onTouchStart={() => handleCellMouseDown(rowIndex, colIndex)}
+                        onTouchMove={(e) => {
+                          e.preventDefault()
+                          const touch = e.touches[0]
+                          const element = document.elementFromPoint(touch.clientX, touch.clientY)
+                          if (element && (element as HTMLElement).dataset.row && (element as HTMLElement).dataset.col) {
+                            handleCellMouseEnter(
+                              Number.parseInt((element as HTMLElement).dataset.row!),
+                              Number.parseInt((element as HTMLElement).dataset.col!),
+                            )
+                          }
+                        }}
+                        onTouchEnd={handleCellMouseUp}
+                        data-row={rowIndex}
+                        data-col={colIndex}
+                      >
+                        {cell.letter}
+                      </div>
+                    )),
+                  )}
+                </div>
+
+                {isGameComplete && (
+                  <div className="text-center mt-2 p-2 bg-accent/10 rounded-lg">
+                    <h3 className="text-sm font-bold text-accent mb-1">
+                      🎉 Herzlichen Glückwunsch!
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Du hast alle Wörter in {formatTime(timeElapsed)} mit {score} Punkten gefunden!
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground text-xs">Klicke auf "Neues Spiel" um zu starten!</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-2 sm:gap-6">
-        {/* Game Grid */}
+      {/* Desktop: Grid and Hints side by side */}
+      <div className="hidden sm:grid lg:grid-cols-3 gap-2 sm:gap-6">
+        {/* Desktop Game Grid */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader className="pb-1 sm:pb-6">
@@ -385,7 +518,7 @@ export function WordPuzzleGame() {
           </Card>
         </div>
 
-        <div className={`${showHints ? "block" : "hidden"} sm:block`}>
+        <div className="block">
           <Card>
             <CardHeader className="pb-1 sm:pb-6">
               <CardTitle className="text-sm sm:text-xl">Hinweise</CardTitle>
