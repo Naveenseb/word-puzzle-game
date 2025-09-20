@@ -70,6 +70,7 @@ export function WordPuzzleGame() {
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [gameStarted, setGameStarted] = useState(false)
   const [showHints, setShowHints] = useState(false)
+  const [showStartPage, setShowStartPage] = useState(true)
 
   // Timer effect
   useEffect(() => {
@@ -169,9 +170,11 @@ export function WordPuzzleGame() {
     setScore(0)
     setTimeElapsed(0)
     setGameStarted(true)
+    setShowStartPage(false)
   }, [selectRandomWords])
 
-  const handleCellMouseDown = (row: number, col: number) => {
+  const handleCellMouseDown = (row: number, col: number, e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
     setIsSelecting(true)
     setSelectedCells([{ row, col }])
     updateGridSelection([{ row, col }])
@@ -242,9 +245,83 @@ export function WordPuzzleGame() {
 
   const isGameComplete = gameStarted && gameWords.length > 0 && foundWords.size === gameWords.length
 
-  useEffect(() => {
-    initializeGrid()
-  }, [initializeGrid])
+  // Remove automatic game initialization - game starts only when user clicks start button
+
+  // Start Page Component
+  const StartPage = () => (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="text-center space-y-8 p-4">
+        {/* Animated German Letters */}
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
+          {GERMAN_LETTERS.split('').map((letter, index) => (
+            <div
+              key={letter}
+              className="w-12 h-12 sm:w-16 sm:h-16 bg-primary text-primary-foreground rounded-lg flex items-center justify-center text-lg sm:text-2xl font-bold shadow-lg animate-bounce"
+              style={{
+                animationDelay: `${index * 0.1}s`,
+                animationDuration: '2s',
+                animationIterationCount: 'infinite'
+              }}
+            >
+              {letter}
+            </div>
+          ))}
+        </div>
+
+        {/* Game Title */}
+        <div className="space-y-4">
+          <h1 className="text-3xl sm:text-6xl font-bold text-primary mb-4">
+            Wörter-Rätsel
+          </h1>
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
+            Finde alle versteckten deutschen Wörter im Gitter!
+            <br />
+            Ziehe mit dem Finger über die Buchstaben, um Wörter zu bilden.
+          </p>
+        </div>
+
+        {/* Start Button */}
+        <Button
+          onClick={initializeGrid}
+          size="lg"
+          className="text-lg sm:text-xl px-8 py-4 h-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+        >
+          <Trophy className="w-6 h-6 sm:w-8 sm:h-8 mr-2" />
+          Spiel Starten
+        </Button>
+
+        {/* Game Instructions */}
+        <div className="mt-8 max-w-2xl mx-auto">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-6 shadow-lg">
+            <h3 className="text-lg font-semibold mb-4 text-center">Spielanleitung</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="flex items-start space-x-2">
+                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</div>
+                <p>Ziehe mit dem Finger über die Buchstaben</p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</div>
+                <p>Wörter können horizontal, vertikal oder diagonal sein</p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</div>
+                <p>Wörter können vorwärts oder rückwärts stehen</p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</div>
+                <p>Verwende die Hinweise um die Wörter zu finden</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  // Show start page if not started
+  if (showStartPage) {
+    return <StartPage />
+  }
 
   return (
     <div className="container mx-auto p-2 sm:p-4 max-w-7xl">
@@ -341,15 +418,26 @@ export function WordPuzzleGame() {
           <CardHeader className="pb-1">
             <div className="flex justify-between items-center">
               <CardTitle className="text-sm">Wörter-Gitter</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={initializeGrid}
-                className="text-xs bg-transparent"
-              >
-                <RotateCcw className="h-3 w-3 mr-1" />
-                Neu
-              </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={initializeGrid}
+                    className="text-xs bg-transparent"
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Neu
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowStartPage(true)}
+                    className="text-xs bg-transparent"
+                  >
+                    <HelpCircle className="h-3 w-3 mr-1" />
+                    Start
+                  </Button>
+                </div>
             </div>
           </CardHeader>
           <CardContent className="p-1">
@@ -380,22 +468,30 @@ export function WordPuzzleGame() {
                                 : "bg-card hover:bg-muted"
                           }
                         `}
-                        onMouseDown={() => handleCellMouseDown(rowIndex, colIndex)}
+                        onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                         onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
                         onMouseUp={handleCellMouseUp}
-                        onTouchStart={() => handleCellMouseDown(rowIndex, colIndex)}
+                        onTouchStart={(e) => {
+                          e.preventDefault()
+                          handleCellMouseDown(rowIndex, colIndex, e)
+                        }}
                         onTouchMove={(e) => {
                           e.preventDefault()
-                          const touch = e.touches[0]
-                          const element = document.elementFromPoint(touch.clientX, touch.clientY)
-                          if (element && (element as HTMLElement).dataset.row && (element as HTMLElement).dataset.col) {
-                            handleCellMouseEnter(
-                              Number.parseInt((element as HTMLElement).dataset.row!),
-                              Number.parseInt((element as HTMLElement).dataset.col!),
-                            )
+                          if (isSelecting) {
+                            const touch = e.touches[0]
+                            const element = document.elementFromPoint(touch.clientX, touch.clientY)
+                            if (element && (element as HTMLElement).dataset.row && (element as HTMLElement).dataset.col) {
+                              handleCellMouseEnter(
+                                Number.parseInt((element as HTMLElement).dataset.row!),
+                                Number.parseInt((element as HTMLElement).dataset.col!),
+                              )
+                            }
                           }
                         }}
-                        onTouchEnd={handleCellMouseUp}
+                        onTouchEnd={(e) => {
+                          e.preventDefault()
+                          handleCellMouseUp()
+                        }}
                         data-row={rowIndex}
                         data-col={colIndex}
                       >
@@ -433,16 +529,28 @@ export function WordPuzzleGame() {
             <CardHeader className="pb-1 sm:pb-6">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-sm sm:text-xl">Wörter-Gitter</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={initializeGrid}
-                  className="text-xs sm:text-sm bg-transparent"
-                >
-                  <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">Neues Spiel</span>
-                  <span className="sm:hidden">Neu</span>
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={initializeGrid}
+                    className="text-xs sm:text-sm bg-transparent"
+                  >
+                    <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">Neues Spiel</span>
+                    <span className="sm:hidden">Neu</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowStartPage(true)}
+                    className="text-xs sm:text-sm bg-transparent"
+                  >
+                    <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">Start Seite</span>
+                    <span className="sm:hidden">Start</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-1 sm:p-6">
@@ -473,22 +581,30 @@ export function WordPuzzleGame() {
                                   : "bg-card hover:bg-muted"
                             }
                           `}
-                          onMouseDown={() => handleCellMouseDown(rowIndex, colIndex)}
+                          onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                           onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
                           onMouseUp={handleCellMouseUp}
-                          onTouchStart={() => handleCellMouseDown(rowIndex, colIndex)}
+                          onTouchStart={(e) => {
+                            e.preventDefault()
+                            handleCellMouseDown(rowIndex, colIndex, e)
+                          }}
                           onTouchMove={(e) => {
                             e.preventDefault()
-                            const touch = e.touches[0]
-                            const element = document.elementFromPoint(touch.clientX, touch.clientY)
-                            if (element && (element as HTMLElement).dataset.row && (element as HTMLElement).dataset.col) {
-                              handleCellMouseEnter(
-                                Number.parseInt((element as HTMLElement).dataset.row!),
-                                Number.parseInt((element as HTMLElement).dataset.col!),
-                              )
+                            if (isSelecting) {
+                              const touch = e.touches[0]
+                              const element = document.elementFromPoint(touch.clientX, touch.clientY)
+                              if (element && (element as HTMLElement).dataset.row && (element as HTMLElement).dataset.col) {
+                                handleCellMouseEnter(
+                                  Number.parseInt((element as HTMLElement).dataset.row!),
+                                  Number.parseInt((element as HTMLElement).dataset.col!),
+                                )
+                              }
                             }
                           }}
-                          onTouchEnd={handleCellMouseUp}
+                          onTouchEnd={(e) => {
+                            e.preventDefault()
+                            handleCellMouseUp()
+                          }}
                           data-row={rowIndex}
                           data-col={colIndex}
                         >
